@@ -75,6 +75,7 @@ const saveButton = document.getElementById("save-session");
 const resetTodayButton = document.getElementById("reset-today");
 const importText = document.getElementById("import-text");
 const importButton = document.getElementById("import-button");
+const exportButton = document.getElementById("export-button");
 const historyList = document.getElementById("history-list");
 const calendarGrid = document.getElementById("calendar-grid");
 const dayDetail = document.getElementById("day-detail");
@@ -101,6 +102,7 @@ function init() {
   saveButton.addEventListener("click", handleSave);
   resetTodayButton.addEventListener("click", handleResetToday);
   importButton.addEventListener("click", handleImport);
+  exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
   nextMonthBtn.addEventListener("click", () => changeMonth(1));
 
@@ -487,6 +489,28 @@ function handleImport() {
   persistState();
   renderSession();
   alert(`Imported ${sessions.length} workout${sessions.length > 1 ? "s" : ""}.`);
+}
+
+function handleExport() {
+  if (!state.history.length) {
+    alert("No saved workouts to export yet.");
+    return;
+  }
+
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    history: state.history,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `workouts-${formatDate(today)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function parseImportedSessions(raw) {
