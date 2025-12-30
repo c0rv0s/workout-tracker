@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e6a15d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/w-icon.svg">
+  <link rel="apple-touch-icon" href="icons/w-icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <title>Rotation Workout Tracker</title>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Rotation Workout Tracker</h1>
+    </div>
+    <button id="install-button" class="ghost-btn" hidden>Install App</button>
+  </header>
+
+  <div class="week-strip" id="week-bar"></div>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Today's Plan</p>
+          <h2 id="planned-title">Loading plan…</h2>
+        </div>
+        <input type="hidden" id="session-date">
+      </div>
+      <div class="panel-body">
+        <p class="muted" id="prefill-copy">Prefilling with your most recent weights for this workout.</p>
+        <div id="exercise-list" class="exercise-list"></div>
+        <div class="note-area">
+          <label for="session-note">Session note</label>
+          <textarea id="session-note" rows="3" placeholder="Enter a note for this session"></textarea>
+        </div>
+        <div class="actions">
+          <button id="save-session" class="primary-btn">Save session</button>
+          <button id="reset-today" class="ghost-btn">Reset to today</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel calendar-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Calendar</p>
+          <h2>Log by day</h2>
+        </div>
+        <div class="month-nav">
+          <button id="prev-month" class="icon-btn" aria-label="Previous month">‹</button>
+          <div id="month-label"></div>
+          <button id="next-month" class="icon-btn" aria-label="Next month">›</button>
+        </div>
+      </div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+      <div id="day-detail" class="day-detail muted">Select a day to see what you did.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">History</p>
+          <h2>Recent sessions</h2>
+        </div>
+      </div>
+      <ul id="history-list" class="history-list"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Import</p>
+          <h2>Paste from notes</h2>
+        </div>
+      </div>
+      <div class="panel-body import-body">
+        <label for="import-text" class="muted">Paste one or more dated workouts from your notes</label>
+        <textarea
+          id="import-text"
+          rows="8"
+          placeholder="12/26 lower hypertrophy&#10;Front squat&#9;25/side&#9;3-4x8-12&#10;Barbell lunge&#9;35/side&#10;...&#10;&#10;Took it easy today"
+        ></textarea>
+        <div class="actions import-actions">
+          <button id="import-button" class="primary-btn">Import notes</button>
+          <p class="muted">Date + workout name on the first line, one exercise per line. Blank line before notes.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="main.js" type="module"></script>
+</body>
+</html>
