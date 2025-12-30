@@ -84,6 +84,8 @@ const prevMonthBtn = document.getElementById("prev-month");
 const nextMonthBtn = document.getElementById("next-month");
 const installButton = document.getElementById("install-button");
 const weekBar = document.getElementById("week-bar");
+const storageWarning = document.getElementById("storage-warning");
+const dismissWarningButton = document.getElementById("dismiss-warning");
 
 let deferredPrompt = null;
 
@@ -105,9 +107,18 @@ function init() {
   exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
   nextMonthBtn.addEventListener("click", () => changeMonth(1));
+  
+  if (dismissWarningButton) {
+    dismissWarningButton.addEventListener("click", () => {
+      if (storageWarning) {
+        storageWarning.hidden = true;
+      }
+    });
+  }
 
   registerServiceWorker();
   setupInstallPrompt();
+  checkStorageWarning();
   renderSession();
   renderHistory();
   renderCalendar();
@@ -132,8 +143,20 @@ function loadState() {
 function persistState() {
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
+    checkStorageWarning();
   } catch {
     // keep going even if storage fails
+  }
+}
+
+function checkStorageWarning() {
+  if (!storageWarning) return;
+  
+  const sessionCount = state.history.length;
+  if (sessionCount >= 5000) {
+    storageWarning.hidden = false;
+  } else {
+    storageWarning.hidden = true;
   }
 }
 

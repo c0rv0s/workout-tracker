@@ -21,6 +21,16 @@
     <button id="install-button" class="ghost-btn" hidden>Install App</button>
   </header>
 
+  <div id="storage-warning" class="storage-warning" hidden>
+    <div class="storage-warning-content">
+      <span class="storage-warning-icon">⚠️</span>
+      <div class="storage-warning-text">
+        <strong>Storage Warning:</strong> You have 5,000+ workout sessions stored. Consider exporting older data to maintain performance.
+      </div>
+      <button id="dismiss-warning" class="storage-warning-dismiss" aria-label="Dismiss warning">×</button>
+    </div>
+  </div>
+
   <div class="week-strip" id="week-bar"></div>
 
   <main class="layout">
