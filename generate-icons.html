@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Generate App Icons</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    h1 { color: #c8ff00; }
+    .icon-container {
+      display: flex;
+      gap: 40px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+    .icon-box {
+      text-align: center;
+    }
+    canvas {
+      border: 2px solid #333;
+      border-radius: 12px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 12px 24px;
+      background: #c8ff00;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #b8ef00;
+    }
+    p { color: #888; max-width: 600px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>Generate App Icons</h1>
+  <p>Click each button to download the icon as a PNG. Save them to the <code>icons/</code> folder as <code>icon-192.png</code> and <code>icon-512.png</code>.</p>
+  
+  <div class="icon-container">
+    <div class="icon-box">
+      <canvas id="canvas-192" width="192" height="192"></canvas>
+      <br>
+      <button onclick="download(192)">Download 192×192</button>
+    </div>
+    <div class="icon-box">
+      <canvas id="canvas-512" width="512" height="512"></canvas>
+      <br>
+      <button onclick="download(512)">Download 512×512</button>
+    </div>
+  </div>
+
+  <script>
+    const svgContent = `
+      <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#111318"/>
+            <stop offset="100%" stop-color="#0a0b0f"/>
+          </linearGradient>
+          <linearGradient id="accent-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#c8ff00"/>
+            <stop offset="100%" stop-color="#9fcc00"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="108" fill="url(#bg-grad)"/>
+        <path d="M122 140h70l64 168 64-168h70l-98 232h-72L122 140Z" fill="url(#accent-grad)"/>
+      </svg>
+    `;
+
+    function renderIcon(size) {
+      const canvas = document.getElementById('canvas-' + size);
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+
+    function download(size) {
+      const canvas = document.getElementById('canvas-' + size);
+      const link = document.createElement('a');
+      link.download = 'icon-' + size + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Render both sizes on load
+    renderIcon(192);
+    renderIcon(512);
+  </script>
+</body>
+</html>
+
