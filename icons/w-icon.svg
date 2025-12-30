@@ -1,4 +1,14 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="96" fill="#0f1115"/>
-  <path d="M122 140h70l64 168 64-168h70l-98 232h-72L122 140Z" fill="#e6a15d"/>
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111318"/>
+      <stop offset="100%" stop-color="#0a0b0f"/>
+    </linearGradient>
+    <linearGradient id="accent-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c8ff00"/>
+      <stop offset="100%" stop-color="#9fcc00"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg-grad)"/>
+  <path d="M122 140h70l64 168 64-168h70l-98 232h-72L122 140Z" fill="url(#accent-grad)"/>
 </svg>
