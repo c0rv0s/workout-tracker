@@ -86,6 +86,8 @@ const installButton = document.getElementById("install-button");
 const weekBar = document.getElementById("week-bar");
 const storageWarning = document.getElementById("storage-warning");
 const dismissWarningButton = document.getElementById("dismiss-warning");
+const googleBackupBtn = document.getElementById("google-backup-btn");
+const googleRestoreBtn = document.getElementById("google-restore-btn");
 
 let deferredPrompt = null;
 
@@ -114,6 +116,18 @@ function init() {
         storageWarning.hidden = true;
       }
     });
+  }
+
+  if (googleBackupBtn) {
+    googleBackupBtn.addEventListener("click", handleGoogleBackup);
+  }
+  if (googleRestoreBtn) {
+    googleRestoreBtn.addEventListener("click", handleGoogleRestore);
+  }
+
+  // Initialize Google Sheets if available
+  if (typeof initGoogleSheets === 'function') {
+    initGoogleSheets();
   }
 
   registerServiceWorker();
@@ -689,4 +703,58 @@ function setupInstallPrompt() {
     deferredPrompt = null;
     installButton.hidden = true;
   });
+}
+
+async function handleGoogleBackup() {
+  if (!state.history.length) {
+    alert("No workout sessions to backup.");
+    return;
+  }
+
+  if (typeof exportToGoogleSheets !== 'function') {
+    alert("Google Sheets backup is not configured. Please set GOOGLE_SCRIPT_URL in google-sheets.js");
+    return;
+  }
+
+  try {
+    googleBackupBtn.disabled = true;
+    await exportToGoogleSheets(state);
+  } catch (error) {
+    alert(`Backup failed: ${error.message}`);
+  } finally {
+    googleBackupBtn.disabled = false;
+  }
+}
+
+async function handleGoogleRestore() {
+  if (typeof importFromGoogleSheets !== 'function') {
+    alert("Google Sheets backup is not configured. Please set GOOGLE_SCRIPT_URL in google-sheets.js");
+    return;
+  }
+
+  if (!confirm("This will replace your current workout data with data from Google Sheets. Continue?")) {
+    return;
+  }
+
+  try {
+    googleRestoreBtn.disabled = true;
+    const sessions = await importFromGoogleSheets();
+    
+    if (!sessions || !Array.isArray(sessions)) {
+      throw new Error("Invalid data received from Google Sheets");
+    }
+
+    // Replace current state
+    state.history = sessions;
+    persistState();
+    renderSession();
+    renderHistory();
+    renderCalendar();
+    
+    alert(`Restored ${sessions.length} workout sessions from Google Sheets.`);
+  } catch (error) {
+    alert(`Restore failed: ${error.message}`);
+  } finally {
+    googleRestoreBtn.disabled = false;
+  }
 }

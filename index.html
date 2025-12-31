@@ -103,8 +103,26 @@
         </div>
       </div>
     </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Cloud Backup</p>
+          <h2>Google Sheets</h2>
+        </div>
+      </div>
+      <div class="panel-body import-body">
+        <p class="muted">Back up your workout data to Google Sheets for safe keeping. You can restore it anytime, even after reinstalling the app.</p>
+        <div class="actions import-actions">
+          <button id="google-backup-btn" class="primary-btn">Backup to Google Sheets</button>
+          <button id="google-restore-btn" class="ghost-btn">Restore from Google Sheets</button>
+        </div>
+        <div id="google-status" class="muted" style="margin-top: 12px; font-size: 13px;"></div>
+      </div>
+    </section>
   </main>
 
+  <script src="google-sheets.js"></script>
   <script src="main.js" type="module"></script>
 </body>
 </html>
