@@ -24,10 +24,11 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Don't cache Google Apps Script requests - always fetch from network (GET or POST)
-  if (event.request.url.includes('script.google.com')) {
-    event.respondWith(fetch(event.request));
-    return;
+  const url = new URL(event.request.url);
+  
+  // Don't intercept external requests (Google Apps Script, etc.) - let browser handle them
+  if (url.origin !== self.location.origin) {
+    return; // Don't call event.respondWith, let the browser handle it
   }
 
   // Only cache GET requests
