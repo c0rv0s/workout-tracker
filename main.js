@@ -683,10 +683,25 @@ function handleReset() {
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-  // Avoid stale caches while iterating locally: unregister any existing workers and skip registering a new one.
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    registrations.forEach((reg) => reg.unregister());
-  });
+  
+  navigator.serviceWorker
+    .register("./service-worker.js")
+    .then((registration) => {
+      console.log("Service Worker registered:", registration);
+      // Check for updates
+      registration.addEventListener("updatefound", () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            // New service worker available, reload to activate
+            window.location.reload();
+          }
+        });
+      });
+    })
+    .catch((error) => {
+      console.error("Service Worker registration failed:", error);
+    });
 }
 
 function setupInstallPrompt() {

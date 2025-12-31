@@ -1,9 +1,10 @@
-const CACHE_NAME = "rotation-tracker-cache-v1";
+const CACHE_NAME = "rotation-tracker-cache-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./main.js",
+  "./google-sheets.js",
   "./manifest.webmanifest",
 ];
 
@@ -25,16 +26,24 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
+  // Network First strategy - try network first, fall back to cache
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(() => caches.match("./index.html"));
-    })
+    fetch(event.request)
+      .then((response) => {
+        // If network request succeeds, update cache and return response
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => {
+        // Network failed, try cache
+        return caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          // If cache also fails, return index.html for navigation requests
+          if (event.request.mode === "navigate") {
+            return caches.match("./index.html");
+          }
+        });
+      })
   );
 });
