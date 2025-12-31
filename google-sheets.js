@@ -1,12 +1,17 @@
 // Google Sheets Backup Integration
 // Uses Google Apps Script as a proxy backend (see README for setup)
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw53Zm2j40uDCi2qHI_Ry_fVgDz3YxzGwom1YPvg0nar4_4YeLLlHs41T83QN6R7gjvGw/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyg8vSRf0dVad-epB9T5eDv7KfMJcUWHskeobXTHrlXPQ5TBLw6pQyC0NJGra80AIUVQ/exec';
 
 // Export data to Google Sheets via Apps Script
 async function exportToGoogleSheets(state) {
   if (!GOOGLE_SCRIPT_URL) {
     updateGoogleStatus('⚠️ Please configure Google Script URL in google-sheets.js. See README for setup.');
+    return;
+  }
+
+  if (!state.history || !state.history.length) {
+    updateGoogleStatus('No workout data to backup.');
     return;
   }
 
@@ -22,40 +27,68 @@ async function exportToGoogleSheets(state) {
       },
     };
 
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    // Check if response is ok
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
-    }
-
-    const result = await response.json();
+    // Use GET with URL parameter (more reliable with Apps Script than POST)
+    // Note: URL length limit is ~2000 chars, so for large data we'll use a workaround
+    const payloadString = JSON.stringify(payload);
     
-    if (result.error) {
-      throw new Error(result.error);
-    }
+    if (payloadString.length > 1500) {
+      // For large payloads, use form submission (doesn't wait for response but works reliably)
+      updateGoogleStatus('Submitting large backup...');
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = GOOGLE_SCRIPT_URL;
+      form.target = '_blank';
+      form.style.display = 'none';
+      
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'data';
+      input.value = payloadString;
+      form.appendChild(input);
+      
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+      
+      // Since we can't get response, just update status
+      updateGoogleStatus(`✓ Backup submitted! Check your Google Drive for "Rotation Workout Backup" spreadsheet. The data should appear shortly.`);
+      return null;
+    } else {
+      // For smaller payloads, use GET
+      const encodedData = encodeURIComponent(payloadString);
+      const url = `${GOOGLE_SCRIPT_URL}?data=${encodedData}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        redirect: 'follow',
+      });
 
-    if (!result.url) {
-      throw new Error('No URL returned from backup');
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
+      }
 
-    updateGoogleStatus(`✓ Backed up ${state.history.length} sessions. <a href="${result.url}" target="_blank" style="color: var(--accent);">Open Sheet</a>`);
-    return result.url;
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (!result.url) {
+        throw new Error('No URL returned from backup');
+      }
+
+      updateGoogleStatus(`✓ Backed up ${state.history.length} sessions. <a href="${result.url}" target="_blank" style="color: var(--accent);">Open Sheet</a>`);
+      return result.url;
+    }
   } catch (error) {
     console.error('Error exporting to Google Sheets:', error);
     
     // Provide helpful error message
     let errorMsg = error.message;
-    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-      errorMsg = 'CORS error. Make sure deployment is set to "Anyone" (not "Anyone with Google account"). Also try running the script manually once to authorize it.';
+    if (error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
+      errorMsg = 'Network error. The backup may have succeeded - check your Google Drive for "Rotation Workout Backup" spreadsheet.';
     } else if (error.message.includes('401') || error.message.includes('403')) {
       errorMsg = 'Authorization error. Please run the script manually once in Apps Script to authorize it.';
     }
@@ -78,6 +111,7 @@ async function importFromGoogleSheets() {
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=import`, {
       method: 'GET',
       mode: 'cors',
+      redirect: 'follow',
     });
 
     if (!response.ok) {

@@ -22,18 +22,50 @@ const SPREADSHEET_NAME = 'Rotation Workout Backup';
 const SHEET_NAME = 'Workouts';
 
 function doPost(e) {
-  return handleRequest(e.postData.contents, 'POST');
+  try {
+    let requestData;
+    
+    // Handle different POST formats
+    if (e.postData) {
+      if (e.postData.contents) {
+        requestData = e.postData.contents;
+      } else if (e.parameter && e.parameter.data) {
+        requestData = e.parameter.data;
+      } else {
+        // Try to get from form data
+        requestData = JSON.stringify(e.parameter);
+      }
+    } else if (e.parameter && e.parameter.data) {
+      requestData = e.parameter.data;
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({
+        error: 'No data received in POST request'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return handleRequest(requestData, 'POST');
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: 'doPost error: ' + error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doGet(e) {
-  const data = e.parameter.data;
-  if (data) {
-    return handleRequest(decodeURIComponent(data), 'GET');
-  } else if (e.parameter.action === 'import') {
-    return importData();
-  } else {
+  try {
+    const data = e.parameter.data;
+    if (data) {
+      return handleRequest(decodeURIComponent(data), 'GET');
+    } else if (e.parameter.action === 'import') {
+      return importData();
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({
+        error: 'Invalid request. Use ?action=import or ?data=...'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({
-      error: 'Invalid request. Use ?action=import or ?data=...'
+      error: 'doGet error: ' + error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -42,14 +74,24 @@ function handleRequest(requestData, method) {
   try {
     let payload;
     try {
-      payload = JSON.parse(requestData);
+      // Try parsing as JSON
+      if (typeof requestData === 'string') {
+        payload = JSON.parse(requestData);
+      } else {
+        payload = requestData;
+      }
     } catch (e) {
       return ContentService.createTextOutput(JSON.stringify({
-        error: 'Invalid JSON: ' + e.toString()
+        error: 'Invalid JSON: ' + e.toString() + '. Received: ' + requestData.substring(0, 100)
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
     if (payload.action === 'export') {
+      if (!payload.data || !payload.data.history) {
+        return ContentService.createTextOutput(JSON.stringify({
+          error: 'No data.history found in payload'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
       return exportData(payload.data);
     } else {
       return ContentService.createTextOutput(JSON.stringify({
@@ -58,7 +100,7 @@ function handleRequest(requestData, method) {
     }
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({
-      error: error.toString()
+      error: 'handleRequest error: ' + error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -84,6 +126,12 @@ function findOrCreateSpreadsheet() {
 
 function exportData(data) {
   try {
+    if (!data || !data.history || !Array.isArray(data.history)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        error: 'Invalid data format. Expected data.history array.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     const ss = findOrCreateSpreadsheet();
     let sheet = ss.getSheetByName(SHEET_NAME);
     
@@ -100,33 +148,33 @@ function exportData(data) {
     
     // Prepare data rows
     const rows = [];
-    if (data.history && Array.isArray(data.history)) {
-      data.history.forEach(function(entry) {
-        if (entry.exercises && entry.exercises.length > 0) {
-          entry.exercises.forEach(function(exercise, idx) {
-            rows.push([
-              entry.date || '',
-              entry.workoutId || '',
-              entry.workoutId || '',
-              idx === 0 ? (entry.note || '') : '',
-              exercise.name || '',
-              exercise.weight || '',
-              exercise.reps || ''
-            ]);
-          });
-        } else {
+    data.history.forEach(function(entry) {
+      if (!entry.date || !entry.workoutId) return; // Skip invalid entries
+      
+      if (entry.exercises && entry.exercises.length > 0) {
+        entry.exercises.forEach(function(exercise, idx) {
           rows.push([
             entry.date || '',
             entry.workoutId || '',
             entry.workoutId || '',
-            entry.note || '',
-            '',
-            '',
-            ''
+            idx === 0 ? (entry.note || '') : '',
+            exercise.name || '',
+            exercise.weight || '',
+            exercise.reps || ''
           ]);
-        }
-      });
-    }
+        });
+      } else {
+        rows.push([
+          entry.date || '',
+          entry.workoutId || '',
+          entry.workoutId || '',
+          entry.note || '',
+          '',
+          '',
+          ''
+        ]);
+      }
+    });
     
     // Write data
     if (rows.length > 0) {
@@ -147,7 +195,7 @@ function exportData(data) {
     const result = {
       success: true,
       url: ss.getUrl(),
-      count: data.history ? data.history.length : 0
+      count: data.history.length
     };
     
     return ContentService.createTextOutput(JSON.stringify(result))
@@ -155,7 +203,7 @@ function exportData(data) {
     
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({
-      error: error.toString()
+      error: 'exportData error: ' + error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
