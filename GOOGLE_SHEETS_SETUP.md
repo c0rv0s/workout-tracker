@@ -2,6 +2,15 @@
 
 This app can backup and restore your workout data to/from Google Sheets. Follow these steps to set it up:
 
+## ⚠️ Important: Multi-User Setup
+
+**If you're sharing this app with others**, each user needs to deploy their own Google Apps Script. The script runs with the credentials of whoever deploys it, so:
+- All backups go to **your** Google Drive (the deployer's account)
+- Multiple users sharing the same script URL will all write to the **same spreadsheet**
+- Each user should deploy their own script and use their own script URL in `google-sheets.js`
+
+See `README.md` for more details on multi-user setup.
+
 ## Step 1: Create Google Apps Script
 
 1. Go to https://script.google.com
