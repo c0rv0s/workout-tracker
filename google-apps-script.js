@@ -26,20 +26,25 @@ function doPost(e) {
     let requestData;
     
     // Handle different POST formats
-    if (e.postData) {
-      if (e.postData.contents) {
-        requestData = e.postData.contents;
-      } else if (e.parameter && e.parameter.data) {
-        requestData = e.parameter.data;
-      } else {
-        // Try to get from form data
-        requestData = JSON.stringify(e.parameter);
-      }
+    if (e.postData && e.postData.contents) {
+      // JSON in POST body
+      requestData = e.postData.contents;
     } else if (e.parameter && e.parameter.data) {
+      // Form data with 'data' parameter (URL-encoded JSON string)
       requestData = e.parameter.data;
+    } else if (e.postData && e.postData.type === 'application/x-www-form-urlencoded') {
+      // Form-encoded data - extract 'data' parameter
+      const formData = e.parameter;
+      if (formData.data) {
+        requestData = formData.data;
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({
+          error: 'No data parameter found in form POST'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
     } else {
       return ContentService.createTextOutput(JSON.stringify({
-        error: 'No data received in POST request'
+        error: 'No data received in POST request. Expected JSON body or form data with "data" parameter.'
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -74,15 +79,28 @@ function handleRequest(requestData, method) {
   try {
     let payload;
     try {
+      // Clean up the data - remove "data=" prefix if present (from form submissions)
+      let cleanData = requestData;
+      if (typeof cleanData === 'string' && cleanData.startsWith('data=')) {
+        cleanData = cleanData.substring(5); // Remove "data=" prefix
+      }
+      
+      // URL decode if needed (Apps Script usually does this automatically, but just in case)
+      try {
+        cleanData = decodeURIComponent(cleanData);
+      } catch (e) {
+        // Already decoded or not URL-encoded
+      }
+      
       // Try parsing as JSON
-      if (typeof requestData === 'string') {
-        payload = JSON.parse(requestData);
+      if (typeof cleanData === 'string') {
+        payload = JSON.parse(cleanData);
       } else {
-        payload = requestData;
+        payload = cleanData;
       }
     } catch (e) {
       return ContentService.createTextOutput(JSON.stringify({
-        error: 'Invalid JSON: ' + e.toString() + '. Received: ' + requestData.substring(0, 100)
+        error: 'Invalid JSON: ' + e.toString() + '. Received (first 200 chars): ' + (requestData ? requestData.toString().substring(0, 200) : 'null')
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -114,12 +132,14 @@ function findOrCreateSpreadsheet() {
   // Create new spreadsheet
   const ss = SpreadsheetApp.create(SPREADSHEET_NAME);
   
-  // Delete default sheet and create our named sheet
+  // Rename the default sheet to our named sheet (don't delete - you can't have 0 sheets)
   const defaultSheet = ss.getSheetByName('Sheet1');
   if (defaultSheet) {
-    ss.deleteSheet(defaultSheet);
+    defaultSheet.setName(SHEET_NAME);
+  } else {
+    // If Sheet1 doesn't exist for some reason, create our sheet
+    ss.insertSheet(SHEET_NAME);
   }
-  ss.insertSheet(SHEET_NAME);
   
   return ss;
 }

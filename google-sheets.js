@@ -1,7 +1,7 @@
 // Google Sheets Backup Integration
 // Uses Google Apps Script as a proxy backend (see README for setup)
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyg8vSRf0dVad-epB9T5eDv7KfMJcUWHskeobXTHrlXPQ5TBLw6pQyC0NJGra80AIUVQ/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby32D-LqiM5V2-y0I-JnesNOkG5UjAVJ-VzbifqtgyeAhiAeFpu8O83yotvZbHx-8Z8UQ/exec';
 
 // Export data to Google Sheets via Apps Script
 async function exportToGoogleSheets(state) {
