@@ -499,20 +499,39 @@ function setDayDetail(dateValue) {
 function handleImport() {
   const raw = importText.value.trim();
   if (!raw) {
-    alert("Paste your note text first.");
+    alert("Paste your data first (JSON export or text notes).");
     return;
   }
 
   let sessions;
   try {
-    sessions = parseImportedSessions(raw);
+    // Try parsing as JSON first (from export file)
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      // Not JSON, try as text format
+      sessions = parseImportedSessions(raw);
+    }
+
+    // If it's JSON, extract the history
+    if (parsed) {
+      if (parsed.history && Array.isArray(parsed.history)) {
+        sessions = parsed.history;
+      } else if (Array.isArray(parsed)) {
+        // Handle case where JSON is just an array
+        sessions = parsed;
+      } else {
+        throw new Error("Invalid JSON format. Expected {history: [...]} or [...]");
+      }
+    }
   } catch (error) {
-    alert(error.message || "Could not import these notes.");
+    alert(error.message || "Could not import data. Make sure it's valid JSON or text format.");
     return;
   }
 
-  if (!sessions.length) {
-    alert("No dated workouts found to import.");
+  if (!sessions || !sessions.length) {
+    alert("No workout sessions found to import.");
     return;
   }
 

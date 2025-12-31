@@ -1,4 +1,4 @@
-const CACHE_NAME = "rotation-tracker-cache-v2";
+const CACHE_NAME = "rotation-tracker-cache-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,6 +24,13 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // Don't cache Google Apps Script requests - always fetch from network (GET or POST)
+  if (event.request.url.includes('script.google.com')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Only cache GET requests
   if (event.request.method !== "GET") return;
 
   // Network First strategy - try network first, fall back to cache
