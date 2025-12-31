@@ -242,6 +242,36 @@ function parseDate(value) {
   return new Date(year, month - 1, day);
 }
 
+// Normalize date to YYYY-MM-DD format
+function normalizeDate(dateString) {
+  if (!dateString) return dateString;
+  
+  // If already in YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  
+  // Try to parse as Date object
+  try {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return formatDate(date);
+    }
+  } catch (e) {
+    // Continue to other parsing methods
+  }
+  
+  // Try parsing common date formats
+  // MM/DD/YYYY or M/D/YYYY
+  const match = dateString.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (match) {
+    const [, month, day, year] = match;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  return dateString; // Return original if can't parse
+}
+
 function renderSession() {
   const dateValue = sessionDateInput.value || formatDate(today);
   const existing = state.history.find((entry) => entry.date === dateValue);
@@ -535,10 +565,20 @@ function handleImport() {
     return;
   }
 
+  // Normalize dates and merge sessions
   sessions.forEach((session) => {
-    state.history = state.history.filter((h) => h.date !== session.date);
-    state.history.push(session);
+    const normalizedDate = normalizeDate(session.date);
+    state.history = state.history.filter((h) => h.date !== normalizedDate);
+    state.history.push({
+      ...session,
+      date: normalizedDate
+    });
   });
+
+  // Sort by date (newest first)
+  state.history.sort(
+    (a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
+  );
 
   sessionDateInput.value = formatDate(today);
   importText.value = "";
@@ -778,8 +818,17 @@ async function handleGoogleRestore() {
       throw new Error("Invalid data received from Google Sheets");
     }
 
-    // Replace current state
-    state.history = sessions;
+    // Normalize all dates to YYYY-MM-DD format
+    const normalizedSessions = sessions.map(session => ({
+      ...session,
+      date: normalizeDate(session.date)
+    }));
+
+    // Replace current state and sort by date (newest first)
+    state.history = normalizedSessions.sort(
+      (a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
+    );
+    
     persistState();
     renderSession();
     renderHistory();
