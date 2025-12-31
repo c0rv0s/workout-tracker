@@ -228,6 +228,24 @@ function exportData(data) {
   }
 }
 
+// Helper function to decode URL-encoded strings (fixes + signs and %XX encoding)
+function decodeValue(value) {
+  if (!value) return '';
+  let str = value.toString();
+  
+  // Replace + with space (URL encoding)
+  str = str.replace(/\+/g, ' ');
+  
+  // Try to decode URI component (%XX encoding)
+  try {
+    str = decodeURIComponent(str);
+  } catch (e) {
+    // If decodeURIComponent fails, just use the string with + replaced
+  }
+  
+  return str;
+}
+
 function importData() {
   try {
     const files = DriveApp.getFilesByName(SPREADSHEET_NAME);
@@ -274,7 +292,7 @@ function importData() {
         currentSession = {
           date: date.toString(),
           workoutId: workoutId.toString(),
-          note: note ? note.toString() : '',
+          note: decodeValue(note), // Decode URL-encoded characters
           exercises: []
         };
       }
@@ -282,12 +300,12 @@ function importData() {
       // Add exercise
       if (exerciseName) {
         currentSession.exercises.push({
-          name: exerciseName.toString(),
-          weight: weight ? weight.toString() : '',
-          reps: reps ? reps.toString() : ''
+          name: decodeValue(exerciseName), // Decode URL-encoded characters
+          weight: decodeValue(weight),
+          reps: decodeValue(reps)
         });
       } else if (note && !currentSession.note) {
-        currentSession.note = note.toString();
+        currentSession.note = decodeValue(note);
       }
     }
     
