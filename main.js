@@ -88,12 +88,15 @@ const storageWarning = document.getElementById("storage-warning");
 const dismissWarningButton = document.getElementById("dismiss-warning");
 const googleBackupBtn = document.getElementById("google-backup-btn");
 const googleRestoreBtn = document.getElementById("google-restore-btn");
+const todayPlanPanel = document.querySelector(".panel");
+const panelBody = document.querySelector(".panel-body");
 
 let deferredPrompt = null;
 
 const today = new Date();
 let monthCursor = { month: today.getMonth(), year: today.getFullYear() };
 let state = loadState();
+let justSaved = false;
 
 init();
 
@@ -123,6 +126,11 @@ function init() {
   }
   if (googleRestoreBtn) {
     googleRestoreBtn.addEventListener("click", handleGoogleRestore);
+  }
+
+  // Add click handler for expanding collapsed panel
+  if (todayPlanPanel) {
+    todayPlanPanel.addEventListener("click", expandPanel);
   }
 
   // Initialize Google Sheets if available
@@ -276,7 +284,28 @@ function renderSession() {
   const dateValue = sessionDateInput.value || formatDate(today);
   const existing = state.history.find((entry) => entry.date === dateValue);
   const plannedWorkout = getWorkoutForDate(dateValue, existing);
+  const isToday = dateValue === formatDate(today);
 
+  // Always render other components
+  renderHistory();
+  renderCalendar();
+  renderWeekBar();
+  setDayDetail(existing ? existing.date : null);
+
+  // Show collapsed state if we just saved and it's today's date
+  if (justSaved && isToday && existing) {
+    showCollapsedState(plannedWorkout);
+    justSaved = false; // Reset the flag
+    return;
+  }
+
+  // Normal expanded state
+  todayPlanPanel?.classList.remove("collapsed");
+  const collapsedContent = document.getElementById("collapsed-content");
+  if (collapsedContent) {
+    collapsedContent.remove();
+  }
+  
   plannedTitle.textContent = `${plannedWorkout.name}`;
   const prefillSource = existing || getLatestEntryForWorkout(plannedWorkout.id);
   prefillCopy.textContent = prefillSource
@@ -285,11 +314,75 @@ function renderSession() {
 
   noteField.value = existing?.note ?? "";
   renderExerciseInputs(plannedWorkout, prefillSource);
-  renderHistory();
-  renderCalendar();
-  renderWeekBar();
-  setDayDetail(existing ? existing.date : null);
+  
+  // Show all elements
+  prefillCopy.hidden = false;
+  exerciseListEl.hidden = false;
+  const noteArea = document.querySelector(".note-area");
+  const actions = document.querySelector(".actions");
+  if (noteArea) noteArea.removeAttribute("hidden");
+  if (actions) actions.removeAttribute("hidden");
 }
+
+function showCollapsedState(workout) {
+  todayPlanPanel?.classList.add("collapsed");
+  plannedTitle.textContent = `${workout.name}`;
+  
+  // Remove any existing collapsed content
+  const existingCollapsed = document.getElementById("collapsed-content");
+  if (existingCollapsed) {
+    existingCollapsed.remove();
+  }
+  
+  // Create collapsed content
+  const collapsedContent = document.createElement("div");
+  collapsedContent.id = "collapsed-content";
+  collapsedContent.className = "collapsed-content";
+  collapsedContent.innerHTML = `
+    <div class="completion-checkmark">✓</div>
+    <div class="completion-message">Great work! Session saved.</div>
+  `;
+  panelBody?.appendChild(collapsedContent);
+  
+  // Hide normal content
+  prefillCopy.hidden = true;
+  exerciseListEl.hidden = true;
+  const noteArea = document.querySelector(".note-area");
+  const actions = document.querySelector(".actions");
+  if (noteArea) noteArea.setAttribute("hidden", "");
+  if (actions) actions.setAttribute("hidden", "");
+}
+
+function expandPanel(e) {
+  // Don't expand if clicking on buttons, inputs, or links
+  if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || 
+      e.target.tagName === 'TEXTAREA' || e.target.tagName === 'A' ||
+      e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) {
+    return;
+  }
+  
+  // Only expand if panel is collapsed
+  if (!todayPlanPanel?.classList.contains("collapsed")) {
+    return;
+  }
+  
+  todayPlanPanel.classList.remove("collapsed");
+  const collapsedContent = document.getElementById("collapsed-content");
+  if (collapsedContent) {
+    collapsedContent.remove();
+  }
+  
+  prefillCopy.hidden = false;
+  exerciseListEl.hidden = false;
+  const noteArea = document.querySelector(".note-area");
+  const actions = document.querySelector(".actions");
+  if (noteArea) noteArea.removeAttribute("hidden");
+  if (actions) actions.removeAttribute("hidden");
+  
+  // Re-render to show full content
+  renderSession();
+}
+
 
 function getWorkoutForDate(dateValue, existingEntry) {
   if (existingEntry) {
@@ -382,11 +475,18 @@ function handleSave() {
   state.history = state.history.filter((h) => h.date !== dateValue);
   state.history.push(entry);
   persistState();
+  
+  // Set flag to show collapsed state if saving today's session
+  if (dateValue === formatDate(today)) {
+    justSaved = true;
+  }
+  
   renderSession();
 }
 
 function handleResetToday() {
   sessionDateInput.value = formatDate(today);
+  justSaved = false; // Reset the flag when resetting
   renderSession();
   setDayDetail(null);
 }
