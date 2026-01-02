@@ -34,7 +34,7 @@
   <div class="week-strip" id="week-bar"></div>
 
   <main class="layout">
-    <section class="panel">
+    <section class="panel" id="today-plan-panel">
       <div class="panel-head">
         <div>
           <p class="eyebrow">Today's Plan</p>
@@ -43,15 +43,30 @@
         <input type="hidden" id="session-date">
       </div>
       <div class="panel-body">
-        <p class="muted" id="prefill-copy">Prefilling with your most recent weights for this workout.</p>
-        <div id="exercise-list" class="exercise-list"></div>
-        <div class="note-area">
-          <label for="session-note">Session note</label>
-          <textarea id="session-note" rows="3" placeholder="How did it feel? Any PRs?"></textarea>
+        <div id="today-plan-complete" class="plan-complete" hidden>
+          <div class="plan-complete-badge" aria-hidden="true">
+            <span class="plan-complete-check">✓</span>
+          </div>
+          <div class="plan-complete-copy">
+            <strong>Session saved.</strong>
+            <div class="muted">Nice work — you completed today’s plan.</div>
+          </div>
+          <div class="plan-complete-actions">
+            <button id="edit-today-plan" class="ghost-btn" type="button">Edit</button>
+          </div>
         </div>
-        <div class="actions">
-          <button id="save-session" class="primary-btn">Save Session</button>
-          <button id="reset-today" class="ghost-btn">Reset to Today</button>
+
+        <div id="today-plan-content">
+          <p class="muted" id="prefill-copy">Prefilling with your most recent weights for this workout.</p>
+          <div id="exercise-list" class="exercise-list"></div>
+          <div class="note-area">
+            <label for="session-note">Session note</label>
+            <textarea id="session-note" rows="3" placeholder="How did it feel? Any PRs?"></textarea>
+          </div>
+          <div class="actions">
+            <button id="save-session" class="primary-btn">Save Session</button>
+            <button id="reset-today" class="ghost-btn">Reset to Today</button>
+          </div>
         </div>
       </div>
     </section>

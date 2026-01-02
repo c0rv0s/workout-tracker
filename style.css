@@ -413,6 +413,56 @@ a:hover {
 }
 
 /* ========================================
+   TODAY'S PLAN "COMPLETED" STATE
+   ======================================== */
+
+.plan-complete {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-accent);
+  background: linear-gradient(135deg, var(--accent-dim), rgba(17, 19, 24, 0.6));
+  box-shadow: var(--shadow-accent);
+}
+
+.plan-complete-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent) 0%, #dfff5e 60%, var(--accent) 100%);
+  color: var(--bg-deep);
+  flex-shrink: 0;
+}
+
+.plan-complete-check {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.plan-complete-copy strong {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+
+.plan-complete-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-collapsed .panel-head {
+  margin-bottom: 14px;
+}
+
+/* ========================================
    FORMS & INPUTS
    ======================================== */
 

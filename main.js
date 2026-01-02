@@ -66,6 +66,7 @@ const templateMap = templates.reduce((acc, template) => {
 }, {});
 
 const storageKey = "rotation-workout-state-v1";
+const todaysPlanCollapsedKey = "rotation-todays-plan-collapsed-v1";
 const sessionDateInput = document.getElementById("session-date");
 const plannedTitle = document.getElementById("planned-title");
 const exerciseListEl = document.getElementById("exercise-list");
@@ -73,6 +74,10 @@ const prefillCopy = document.getElementById("prefill-copy");
 const noteField = document.getElementById("session-note");
 const saveButton = document.getElementById("save-session");
 const resetTodayButton = document.getElementById("reset-today");
+const todayPlanPanel = document.getElementById("today-plan-panel");
+const todayPlanComplete = document.getElementById("today-plan-complete");
+const todayPlanContent = document.getElementById("today-plan-content");
+const editTodayPlanButton = document.getElementById("edit-today-plan");
 const importText = document.getElementById("import-text");
 const importButton = document.getElementById("import-button");
 const exportButton = document.getElementById("export-button");
@@ -105,6 +110,12 @@ function init() {
   sessionDateInput.value = formatDate(today);
   saveButton.addEventListener("click", handleSave);
   resetTodayButton.addEventListener("click", handleResetToday);
+  if (editTodayPlanButton) {
+    editTodayPlanButton.addEventListener("click", () => {
+      setTodaysPlanCollapsed(false);
+      setPlanCollapsedUI(false);
+    });
+  }
   importButton.addEventListener("click", handleImport);
   exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
@@ -136,6 +147,34 @@ function init() {
   renderSession();
   renderHistory();
   renderCalendar();
+}
+
+function setTodaysPlanCollapsed(isCollapsed) {
+  try {
+    if (!isCollapsed) {
+      localStorage.removeItem(todaysPlanCollapsedKey);
+      return;
+    }
+    localStorage.setItem(todaysPlanCollapsedKey, formatDate(today));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function shouldCollapseForDate(dateValue) {
+  if (dateValue !== formatDate(today)) return false;
+  try {
+    return localStorage.getItem(todaysPlanCollapsedKey) === formatDate(today);
+  } catch {
+    return false;
+  }
+}
+
+function setPlanCollapsedUI(isCollapsed) {
+  if (!todayPlanPanel || !todayPlanComplete || !todayPlanContent) return;
+  todayPlanPanel.classList.toggle("plan-collapsed", Boolean(isCollapsed));
+  todayPlanComplete.hidden = !isCollapsed;
+  todayPlanContent.hidden = isCollapsed;
 }
 
 function loadState() {
@@ -289,6 +328,9 @@ function renderSession() {
   renderCalendar();
   renderWeekBar();
   setDayDetail(existing ? existing.date : null);
+
+  // If today's session is already saved, collapse the plan into a "done" state.
+  setPlanCollapsedUI(shouldCollapseForDate(dateValue));
 }
 
 function getWorkoutForDate(dateValue, existingEntry) {
@@ -382,11 +424,17 @@ function handleSave() {
   state.history = state.history.filter((h) => h.date !== dateValue);
   state.history.push(entry);
   persistState();
+
+  if (dateValue === formatDate(today)) {
+    setTodaysPlanCollapsed(true);
+  }
   renderSession();
 }
 
 function handleResetToday() {
   sessionDateInput.value = formatDate(today);
+  setTodaysPlanCollapsed(false);
+  setPlanCollapsedUI(false);
   renderSession();
   setDayDetail(null);
 }
