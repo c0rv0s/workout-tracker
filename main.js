@@ -88,12 +88,19 @@ const storageWarning = document.getElementById("storage-warning");
 const dismissWarningButton = document.getElementById("dismiss-warning");
 const googleBackupBtn = document.getElementById("google-backup-btn");
 const googleRestoreBtn = document.getElementById("google-restore-btn");
+const todayPanel = document.getElementById("today-panel");
+const todayPanelHead = document.getElementById("today-panel-head");
+const todayPanelBody = document.getElementById("today-panel-body");
+const completionView = document.getElementById("completion-view");
+const completedWorkoutName = document.getElementById("completed-workout-name");
+const expandSessionBtn = document.getElementById("expand-session");
 
 let deferredPrompt = null;
 
 const today = new Date();
 let monthCursor = { month: today.getMonth(), year: today.getFullYear() };
 let state = loadState();
+let isSessionCompleted = false;
 
 init();
 
@@ -109,6 +116,7 @@ function init() {
   exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
   nextMonthBtn.addEventListener("click", () => changeMonth(1));
+  expandSessionBtn.addEventListener("click", handleExpandSession);
   
   if (dismissWarningButton) {
     dismissWarningButton.addEventListener("click", () => {
@@ -277,14 +285,31 @@ function renderSession() {
   const existing = state.history.find((entry) => entry.date === dateValue);
   const plannedWorkout = getWorkoutForDate(dateValue, existing);
 
-  plannedTitle.textContent = `${plannedWorkout.name}`;
-  const prefillSource = existing || getLatestEntryForWorkout(plannedWorkout.id);
-  prefillCopy.textContent = prefillSource
-    ? "Prefilled from your most recent session for this workout."
-    : "Starting from the template targets below.";
+  // Check if we should show completion state
+  if (isSessionCompleted && dateValue === formatDate(today)) {
+    // Show completion state
+    todayPanel.classList.add('completed');
+    todayPanelHead.hidden = true;
+    todayPanelBody.hidden = true;
+    completionView.hidden = false;
+    completedWorkoutName.textContent = plannedWorkout.name;
+  } else {
+    // Show normal state
+    todayPanel.classList.remove('completed');
+    todayPanelHead.hidden = false;
+    todayPanelBody.hidden = false;
+    completionView.hidden = true;
+    
+    plannedTitle.textContent = `${plannedWorkout.name}`;
+    const prefillSource = existing || getLatestEntryForWorkout(plannedWorkout.id);
+    prefillCopy.textContent = prefillSource
+      ? "Prefilled from your most recent session for this workout."
+      : "Starting from the template targets below.";
 
-  noteField.value = existing?.note ?? "";
-  renderExerciseInputs(plannedWorkout, prefillSource);
+    noteField.value = existing?.note ?? "";
+    renderExerciseInputs(plannedWorkout, prefillSource);
+  }
+
   renderHistory();
   renderCalendar();
   renderWeekBar();
@@ -382,13 +407,25 @@ function handleSave() {
   state.history = state.history.filter((h) => h.date !== dateValue);
   state.history.push(entry);
   persistState();
+  
+  // Mark session as completed if saving today's workout
+  if (dateValue === formatDate(today)) {
+    isSessionCompleted = true;
+  }
+  
   renderSession();
 }
 
 function handleResetToday() {
   sessionDateInput.value = formatDate(today);
+  isSessionCompleted = false;
   renderSession();
   setDayDetail(null);
+}
+
+function handleExpandSession() {
+  isSessionCompleted = false;
+  renderSession();
 }
 
 function renderHistory() {
@@ -409,6 +446,7 @@ function renderHistory() {
     `;
     item.querySelector("button").addEventListener("click", () => {
       sessionDateInput.value = entry.date;
+      isSessionCompleted = false;
       renderSession();
       setDayDetail(entry.date);
     });
@@ -462,6 +500,7 @@ function renderCalendar() {
     button.innerHTML = `<span class="day-number">${day}</span><span class="exercise-meta">${label}</span>`;
     button.addEventListener("click", () => {
       sessionDateInput.value = dateValue;
+      isSessionCompleted = false;
       renderSession();
       setDayDetail(dateValue);
     });
@@ -490,6 +529,7 @@ function renderWeekBar() {
     }
     bubble.addEventListener("click", () => {
       sessionDateInput.value = dateValue;
+      isSessionCompleted = false;
       renderSession();
       setDayDetail(dateValue);
     });

@@ -843,6 +843,142 @@ button {
 }
 
 /* ========================================
+   COMPLETION STATE
+   ======================================== */
+
+.panel.completed {
+  background: linear-gradient(135deg, rgba(200, 255, 0, 0.1), rgba(255, 107, 74, 0.05));
+  border-color: var(--accent);
+  box-shadow: var(--shadow-accent);
+  min-height: 280px;
+}
+
+.completion-view {
+  width: 100%;
+}
+
+.completion-header {
+  margin-bottom: 20px;
+  animation: completion-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.completion-header .eyebrow {
+  animation: slide-up 0.5s ease 0.1s backwards;
+}
+
+.completion-header h2 {
+  animation: slide-up 0.5s ease 0.2s backwards;
+}
+
+.completion-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  gap: 20px;
+  animation: completion-enter 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes completion-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.completion-checkmark {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+  animation: checkmark-pop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.2s backwards;
+  box-shadow: 0 8px 32px var(--accent-glow);
+}
+
+@keyframes checkmark-pop {
+  from {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.completion-text {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  animation: slide-up 0.5s ease 0.3s backwards;
+}
+
+.completion-text strong {
+  color: var(--accent);
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.completion-subtext {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.6;
+  animation: slide-up 0.5s ease 0.4s backwards;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.completion-message .ghost-btn {
+  margin-top: 10px;
+  animation: slide-up 0.5s ease 0.5s backwards;
+}
+
+@media (max-width: 800px) {
+  .completion-checkmark {
+    width: 60px;
+    height: 60px;
+    font-size: 36px;
+  }
+  
+  .completion-text {
+    font-size: 1.1rem;
+  }
+  
+  .completion-subtext {
+    font-size: 0.9rem;
+  }
+  
+  .completion-message {
+    padding: 30px 15px;
+  }
+}
+
+/* ========================================
    RESPONSIVE
    ======================================== */
 
