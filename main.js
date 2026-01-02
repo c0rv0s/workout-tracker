@@ -88,6 +88,10 @@ const storageWarning = document.getElementById("storage-warning");
 const dismissWarningButton = document.getElementById("dismiss-warning");
 const googleBackupBtn = document.getElementById("google-backup-btn");
 const googleRestoreBtn = document.getElementById("google-restore-btn");
+const todaysPlanPanel = document.getElementById("todays-plan-panel");
+const planEditView = document.getElementById("plan-edit-view");
+const planCompletionView = document.getElementById("plan-completion-view");
+const editSessionButton = document.getElementById("edit-session");
 
 let deferredPrompt = null;
 
@@ -105,6 +109,9 @@ function init() {
   sessionDateInput.value = formatDate(today);
   saveButton.addEventListener("click", handleSave);
   resetTodayButton.addEventListener("click", handleResetToday);
+  if (editSessionButton) {
+    editSessionButton.addEventListener("click", handleEditSession);
+  }
   importButton.addEventListener("click", handleImport);
   exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
@@ -273,6 +280,7 @@ function normalizeDate(dateString) {
 }
 
 function renderSession() {
+  hideCompletionState();
   const dateValue = sessionDateInput.value || formatDate(today);
   const existing = state.history.find((entry) => entry.date === dateValue);
   const plannedWorkout = getWorkoutForDate(dateValue, existing);
@@ -382,11 +390,36 @@ function handleSave() {
   state.history = state.history.filter((h) => h.date !== dateValue);
   state.history.push(entry);
   persistState();
-  renderSession();
+  renderHistory();
+  renderCalendar();
+  renderWeekBar();
+  setDayDetail(dateValue);
+  showCompletionState();
+}
+
+function showCompletionState() {
+  if (planEditView && planCompletionView && todaysPlanPanel) {
+    planEditView.hidden = true;
+    planCompletionView.hidden = false;
+    todaysPlanPanel.classList.add("completed");
+  }
+}
+
+function hideCompletionState() {
+  if (planEditView && planCompletionView && todaysPlanPanel) {
+    planEditView.hidden = false;
+    planCompletionView.hidden = true;
+    todaysPlanPanel.classList.remove("completed");
+  }
+}
+
+function handleEditSession() {
+  hideCompletionState();
 }
 
 function handleResetToday() {
   sessionDateInput.value = formatDate(today);
+  hideCompletionState();
   renderSession();
   setDayDetail(null);
 }

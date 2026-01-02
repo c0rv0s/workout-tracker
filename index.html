@@ -34,7 +34,7 @@
   <div class="week-strip" id="week-bar"></div>
 
   <main class="layout">
-    <section class="panel">
+    <section class="panel" id="todays-plan-panel">
       <div class="panel-head">
         <div>
           <p class="eyebrow">Today's Plan</p>
@@ -42,7 +42,7 @@
         </div>
         <input type="hidden" id="session-date">
       </div>
-      <div class="panel-body">
+      <div class="panel-body" id="plan-edit-view">
         <p class="muted" id="prefill-copy">Prefilling with your most recent weights for this workout.</p>
         <div id="exercise-list" class="exercise-list"></div>
         <div class="note-area">
@@ -52,6 +52,19 @@
         <div class="actions">
           <button id="save-session" class="primary-btn">Save Session</button>
           <button id="reset-today" class="ghost-btn">Reset to Today</button>
+        </div>
+      </div>
+      <div class="panel-body completion-view" id="plan-completion-view" hidden>
+        <div class="completion-content">
+          <div class="completion-checkmark">
+            <svg viewBox="0 0 52 52" class="checkmark-svg">
+              <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+              <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+          </div>
+          <h3 class="completion-title">Session Saved!</h3>
+          <p class="completion-message">Great work! You crushed it today. 💪</p>
+          <button id="edit-session" class="ghost-btn">Edit Session</button>
         </div>
       </div>
     </section>

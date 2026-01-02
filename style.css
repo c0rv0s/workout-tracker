@@ -909,6 +909,117 @@ button {
 }
 
 /* ========================================
+   SESSION COMPLETION VIEW
+   ======================================== */
+
+.completion-view {
+  display: none;
+}
+
+.completion-view:not([hidden]) {
+  display: flex;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.completion-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  width: 100%;
+}
+
+.completion-checkmark {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 24px;
+}
+
+.checkmark-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.checkmark-circle {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: checkmark-circle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: checkmark-check 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+}
+
+@keyframes checkmark-circle {
+  0% {
+    stroke-dashoffset: 166;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes checkmark-check {
+  0% {
+    stroke-dashoffset: 48;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.completion-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+  animation: fadeIn 0.4s ease-out 0.3s backwards;
+}
+
+.completion-message {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  animation: fadeIn 0.4s ease-out 0.4s backwards;
+}
+
+.completion-view .ghost-btn {
+  animation: fadeIn 0.4s ease-out 0.5s backwards;
+}
+
+/* Collapsed panel state */
+#todays-plan-panel.completed {
+  transition: all 0.3s ease;
+}
+
+#todays-plan-panel.completed .panel-body:not(.completion-view) {
+  display: none;
+}
+
+/* ========================================
    ANIMATIONS & EFFECTS
    ======================================== */
 
