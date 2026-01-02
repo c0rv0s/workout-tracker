@@ -88,6 +88,9 @@ const storageWarning = document.getElementById("storage-warning");
 const dismissWarningButton = document.getElementById("dismiss-warning");
 const googleBackupBtn = document.getElementById("google-backup-btn");
 const googleRestoreBtn = document.getElementById("google-restore-btn");
+const planBody = document.getElementById("plan-body");
+const planCompleted = document.getElementById("plan-completed");
+const editSessionBtn = document.getElementById("edit-session-btn");
 
 let deferredPrompt = null;
 
@@ -123,6 +126,13 @@ function init() {
   }
   if (googleRestoreBtn) {
     googleRestoreBtn.addEventListener("click", handleGoogleRestore);
+  }
+  
+  if (editSessionBtn) {
+    editSessionBtn.addEventListener("click", () => {
+      planCompleted.hidden = true;
+      planBody.hidden = false;
+    });
   }
 
   // Initialize Google Sheets if available
@@ -273,6 +283,12 @@ function normalizeDate(dateString) {
 }
 
 function renderSession() {
+  // Reset view to form
+  if (planBody && planCompleted) {
+    planBody.hidden = false;
+    planCompleted.hidden = true;
+  }
+
   const dateValue = sessionDateInput.value || formatDate(today);
   const existing = state.history.find((entry) => entry.date === dateValue);
   const plannedWorkout = getWorkoutForDate(dateValue, existing);
@@ -383,6 +399,14 @@ function handleSave() {
   state.history.push(entry);
   persistState();
   renderSession();
+  
+  // Show completion state
+  if (planBody && planCompleted) {
+    planBody.hidden = true;
+    planCompleted.hidden = false;
+    // Scroll to top of panel or page to ensure message is seen
+    planCompleted.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 function handleResetToday() {

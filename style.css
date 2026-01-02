@@ -961,3 +961,47 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ========================================
+   COMPLETION PANEL
+   ======================================== */
+
+.panel-completed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.panel-completed[hidden] {
+  display: none;
+}
+
+.completion-icon {
+  font-size: 48px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--accent);
+  margin-bottom: 8px;
+  animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

@@ -42,7 +42,7 @@
         </div>
         <input type="hidden" id="session-date">
       </div>
-      <div class="panel-body">
+      <div class="panel-body" id="plan-body">
         <p class="muted" id="prefill-copy">Prefilling with your most recent weights for this workout.</p>
         <div id="exercise-list" class="exercise-list"></div>
         <div class="note-area">
@@ -53,6 +53,12 @@
           <button id="save-session" class="primary-btn">Save Session</button>
           <button id="reset-today" class="ghost-btn">Reset to Today</button>
         </div>
+      </div>
+      <div class="panel-completed" id="plan-completed" hidden>
+        <div class="completion-icon">✓</div>
+        <h3>Workout Complete!</h3>
+        <p class="muted">Great job crushing your session.</p>
+        <button id="edit-session-btn" class="ghost-btn">Edit Session</button>
       </div>
     </section>
 
