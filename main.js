@@ -350,6 +350,9 @@ function renderSession() {
   noteField.value = existing?.note ?? "";
   renderExerciseInputs(plannedWorkout, prefillSource);
   
+  // Update save button text based on whether it's historical
+  updateSaveButtonState(isToday, existing);
+  
   // Show all elements
   prefillCopy.hidden = false;
   exerciseListEl.hidden = false;
@@ -357,6 +360,37 @@ function renderSession() {
   const actions = document.querySelector(".actions");
   if (noteArea) noteArea.removeAttribute("hidden");
   if (actions) actions.removeAttribute("hidden");
+}
+
+function updateSaveButtonState(isToday, existing) {
+  if (!saveButton) return;
+  
+  // Reset button state
+  saveButton.disabled = false;
+  saveButton.classList.remove("updating", "updated");
+  saveButton.innerHTML = "";
+  
+  if (isToday) {
+    saveButton.textContent = "Save Session";
+  } else if (existing) {
+    saveButton.textContent = "Update Session";
+  } else {
+    saveButton.textContent = "Save Session";
+  }
+}
+
+function setSaveButtonUpdating() {
+  if (!saveButton) return;
+  saveButton.disabled = true;
+  saveButton.classList.add("updating");
+  saveButton.innerHTML = '<span class="spinner"></span> Updating...';
+}
+
+function setSaveButtonUpdated() {
+  if (!saveButton) return;
+  saveButton.disabled = true;
+  saveButton.classList.add("updated");
+  saveButton.textContent = "Updated";
 }
 
 function showCollapsedState(workout) {
@@ -466,6 +500,8 @@ function renderExerciseInputs(workout, sourceEntry) {
       "";
     weightInput.dataset.exercise = exercise.name;
     weightInput.dataset.field = "weight";
+    weightInput.addEventListener("input", reenableSaveButton);
+    weightInput.addEventListener("change", reenableSaveButton);
 
     const repsInput = document.createElement("input");
     repsInput.type = "text";
@@ -475,18 +511,46 @@ function renderExerciseInputs(workout, sourceEntry) {
       exercise.target;
     repsInput.dataset.exercise = exercise.name;
     repsInput.dataset.field = "reps";
+    repsInput.addEventListener("input", reenableSaveButton);
+    repsInput.addEventListener("change", reenableSaveButton);
 
     row.appendChild(name);
     row.appendChild(weightInput);
     row.appendChild(repsInput);
     exerciseListEl.appendChild(row);
   });
+  
+  // Also listen to note field changes
+  if (noteField) {
+    noteField.removeEventListener("input", reenableSaveButton);
+    noteField.removeEventListener("change", reenableSaveButton);
+    noteField.addEventListener("input", reenableSaveButton);
+    noteField.addEventListener("change", reenableSaveButton);
+  }
 }
 
-function handleSave() {
+function reenableSaveButton() {
+  if (!saveButton) return;
+  if (saveButton.classList.contains("updated")) {
+    const dateValue = sessionDateInput.value || formatDate(today);
+    const existing = state.history.find((entry) => entry.date === dateValue);
+    const isToday = dateValue === formatDate(today);
+    updateSaveButtonState(isToday, existing);
+  }
+}
+
+async function handleSave() {
   const dateValue = sessionDateInput.value || formatDate(today);
   const existing = state.history.find((entry) => entry.date === dateValue);
   const planned = getWorkoutForDate(dateValue, existing);
+  const isToday = dateValue === formatDate(today);
+  const isHistorical = !isToday && existing;
+  
+  // Show updating state for historical entries
+  if (isHistorical) {
+    setSaveButtonUpdating();
+  }
+  
   const exercises = Array.from(
     exerciseListEl.querySelectorAll("input")
   ).reduce((acc, input) => {
@@ -510,16 +574,26 @@ function handleSave() {
     exercises,
   };
 
+  // Simulate a brief delay for historical updates to show the spinner
+  if (isHistorical) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
   state.history = state.history.filter((h) => h.date !== dateValue);
   state.history.push(entry);
   persistState();
   
   // Set flag to show collapsed state if saving today's session
-  if (dateValue === formatDate(today)) {
+  if (isToday) {
     justSaved = true;
   }
   
   renderSession();
+  
+  // Show updated state for historical entries
+  if (isHistorical) {
+    setSaveButtonUpdated();
+  }
   
   // Automatically backup to Netlify in the background
   autoBackupToNetlify();
@@ -528,6 +602,10 @@ function handleSave() {
 function handleResetToday() {
   sessionDateInput.value = formatDate(today);
   justSaved = false; // Reset the flag when resetting
+  // Re-enable save button if it was in updated state
+  if (saveButton && saveButton.classList.contains("updated")) {
+    updateSaveButtonState(true, null);
+  }
   renderSession();
   setDayDetail(null);
 }
