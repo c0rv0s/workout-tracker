@@ -19,21 +19,20 @@ function normalizeKey(value) {
     .slice(0, MAX_KEY_LENGTH);
 }
 
-function jsonResponse(statusCode, payload, headers = {}) {
+function jsonResponse(statusCode, payload) {
   return new Response(JSON.stringify(payload), {
     status: statusCode,
     headers: {
       ...corsHeaders,
       "Content-Type": "application/json",
-      ...headers,
     },
   });
 }
 
-// Functions v2 format - returns Response objects
-export default async function handler(event) {
+// Functions v2 format - uses Request/Response API
+export default async function handler(request) {
   // Handle CORS preflight
-  if (event.httpMethod === "OPTIONS") {
+  if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: corsHeaders,
@@ -43,8 +42,9 @@ export default async function handler(event) {
   // In Functions v2, getStore automatically gets credentials from Netlify
   const store = getStore(STORE_NAME);
 
-  if (event.httpMethod === "GET") {
-    const key = normalizeKey(event.queryStringParameters?.key || "");
+  if (request.method === "GET") {
+    const url = new URL(request.url);
+    const key = normalizeKey(url.searchParams.get("key") || "");
     
     if (!key) {
       return jsonResponse(400, { error: "Missing backup key." });
@@ -71,10 +71,10 @@ export default async function handler(event) {
     }
   }
 
-  if (event.httpMethod === "POST") {
+  if (request.method === "POST") {
     let body;
     try {
-      body = JSON.parse(event.body || "{}");
+      body = await request.json();
     } catch (error) {
       return jsonResponse(400, { error: "Invalid JSON body." });
     }
@@ -99,5 +99,5 @@ export default async function handler(event) {
     return jsonResponse(200, { ok: true, savedAt: new Date().toISOString() });
   }
 
-  return jsonResponse(405, { error: "Method not allowed." });
+  return jsonResponse(405, { error: "Method not allowed.", method: request.method });
 }
