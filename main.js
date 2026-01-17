@@ -368,6 +368,9 @@ function showCollapsedState(workout) {
   const actions = document.querySelector(".actions");
   if (noteArea) noteArea.setAttribute("hidden", "");
   if (actions) actions.setAttribute("hidden", "");
+  
+  // Scroll to top of page to show the success message
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function expandPanel(e) {
@@ -499,6 +502,9 @@ function handleSave() {
   }
   
   renderSession();
+  
+  // Automatically backup to Netlify in the background
+  autoBackupToNetlify();
 }
 
 function handleResetToday() {
@@ -600,7 +606,9 @@ function renderWeekBar() {
     const entry = state.history.find((h) => h.date === dateValue);
     const bubble = document.createElement("button");
     bubble.className = `week-dot${entry ? " filled" : ""}`;
-    bubble.textContent = dayNames[i];
+    const span = document.createElement("span");
+    span.textContent = dayNames[i];
+    bubble.appendChild(span);
     if (entry) {
       const label = templateMap[entry.workoutId]?.name || "Workout";
       bubble.title = `${label} (${dateValue})`;
@@ -728,6 +736,55 @@ async function handleCopyBackupKey() {
     console.error("Failed to copy backup key:", error);
     updateCloudStatus("Copy failed. Please copy the key manually.");
   }
+}
+
+// Silent automatic backup - runs in background without blocking UI
+async function autoBackupToNetlify() {
+  if (!state.history.length) return;
+  
+  const key = getBackupKey();
+  if (!key) return;
+  
+  // Run backup in background without blocking
+  (async () => {
+    try {
+      const payload = {
+        key,
+        data: {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          history: state.history,
+        },
+      };
+      
+      const response = await fetch("/.netlify/functions/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      
+      if (response.ok) {
+        // Silently update status on success
+        if (cloudStatus) {
+          const count = state.history.length;
+          cloudStatus.textContent = `✓ Auto-backed up ${count} session${count === 1 ? "" : "s"}.`;
+          // Clear status after 3 seconds
+          setTimeout(() => {
+            if (cloudStatus && cloudStatus.textContent.includes("Auto-backed up")) {
+              cloudStatus.textContent = "Ready to backup/restore.";
+            }
+          }, 3000);
+        }
+      } else {
+        // Log error but don't show alert
+        const errorText = await response.text();
+        console.error("Auto-backup failed:", parseErrorMessage(errorText, `HTTP ${response.status}`));
+      }
+    } catch (error) {
+      // Log error but don't interrupt user
+      console.error("Auto-backup error:", error);
+    }
+  })();
 }
 
 async function handleCloudBackup() {
