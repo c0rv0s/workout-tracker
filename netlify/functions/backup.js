@@ -3,11 +3,10 @@ import { getStore } from "@netlify/blobs";
 const STORE_NAME = "rotation-backups";
 const MAX_KEY_LENGTH = 64;
 
-const baseHeaders = {
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-  "Content-Type": "application/json",
 };
 
 function normalizeKey(value) {
@@ -20,22 +19,25 @@ function normalizeKey(value) {
     .slice(0, MAX_KEY_LENGTH);
 }
 
-function jsonResponse(statusCode, payload) {
-  return {
-    statusCode,
-    headers: baseHeaders,
-    body: JSON.stringify(payload),
-  };
+function jsonResponse(statusCode, payload, headers = {}) {
+  return new Response(JSON.stringify(payload), {
+    status: statusCode,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      ...headers,
+    },
+  });
 }
 
-// Functions v2 format - this enables automatic Blobs configuration
+// Functions v2 format - returns Response objects
 export default async function handler(event) {
+  // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers: baseHeaders,
-      body: "",
-    };
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
   // In Functions v2, getStore automatically gets credentials from Netlify
@@ -43,6 +45,7 @@ export default async function handler(event) {
 
   if (event.httpMethod === "GET") {
     const key = normalizeKey(event.queryStringParameters?.key || "");
+    
     if (!key) {
       return jsonResponse(400, { error: "Missing backup key." });
     }
@@ -54,6 +57,7 @@ export default async function handler(event) {
       console.error("Failed to read backup:", error);
       return jsonResponse(500, { error: "Failed to read backup." });
     }
+    
     if (!raw) {
       return jsonResponse(404, { error: "Backup not found." });
     }
@@ -91,6 +95,7 @@ export default async function handler(event) {
       console.error("Failed to write backup:", error);
       return jsonResponse(500, { error: "Failed to write backup." });
     }
+    
     return jsonResponse(200, { ok: true, savedAt: new Date().toISOString() });
   }
 
