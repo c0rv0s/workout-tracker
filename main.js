@@ -69,6 +69,7 @@ const storageKey = "rotation-workout-state-v1";
 const backupKeyStorageKey = "rotation-workout-backup-key-v1";
 const sessionDateInput = document.getElementById("session-date");
 const plannedTitle = document.getElementById("planned-title");
+const planEyebrow = document.getElementById("plan-eyebrow");
 const exerciseListEl = document.getElementById("exercise-list");
 const prefillCopy = document.getElementById("prefill-copy");
 const noteField = document.getElementById("session-note");
@@ -297,11 +298,28 @@ function normalizeDate(dateString) {
   return dateString; // Return original if can't parse
 }
 
+function formatDateLabel(dateValue) {
+  const isToday = dateValue === formatDate(today);
+  if (isToday) {
+    return "Today's Plan";
+  }
+  
+  const date = parseDate(dateValue);
+  const month = date.toLocaleString("default", { month: "long" });
+  const day = date.getDate();
+  return `${month} ${day}'s Plan`;
+}
+
 function renderSession() {
   const dateValue = sessionDateInput.value || formatDate(today);
   const existing = state.history.find((entry) => entry.date === dateValue);
   const plannedWorkout = getWorkoutForDate(dateValue, existing);
   const isToday = dateValue === formatDate(today);
+
+  // Update eyebrow label based on date
+  if (planEyebrow) {
+    planEyebrow.textContent = formatDateLabel(dateValue);
+  }
 
   // Always render other components
   renderHistory();
