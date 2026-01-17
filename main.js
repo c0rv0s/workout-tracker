@@ -74,6 +74,9 @@ const prefillCopy = document.getElementById("prefill-copy");
 const noteField = document.getElementById("session-note");
 const saveButton = document.getElementById("save-session");
 const resetTodayButton = document.getElementById("reset-today");
+const importText = document.getElementById("import-text");
+const importButton = document.getElementById("import-button");
+const exportButton = document.getElementById("export-button");
 const historyList = document.getElementById("history-list");
 const calendarGrid = document.getElementById("calendar-grid");
 const dayDetail = document.getElementById("day-detail");
@@ -109,6 +112,8 @@ function init() {
   sessionDateInput.value = formatDate(today);
   saveButton.addEventListener("click", handleSave);
   resetTodayButton.addEventListener("click", handleResetToday);
+  importButton.addEventListener("click", handleImport);
+  exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
   nextMonthBtn.addEventListener("click", () => changeMonth(1));
   
@@ -641,6 +646,211 @@ function setDayDetail(dateValue) {
     ${entry.note ? `<em>${safeNote}</em><br>` : ""}
     <pre>${lines}</pre>
   `;
+}
+
+function handleImport() {
+  const raw = importText.value.trim();
+  if (!raw) {
+    alert("Paste your data first (JSON export or text notes).");
+    return;
+  }
+
+  let sessions;
+  try {
+    // Try parsing as JSON first (from export file)
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      // Not JSON, try as text format
+      sessions = parseImportedSessions(raw);
+    }
+
+    // If it's JSON, extract the history
+    if (parsed) {
+      if (parsed.history && Array.isArray(parsed.history)) {
+        sessions = parsed.history;
+      } else if (Array.isArray(parsed)) {
+        // Handle case where JSON is just an array
+        sessions = parsed;
+      } else {
+        throw new Error("Invalid JSON format. Expected {history: [...]} or [...]");
+      }
+    }
+  } catch (error) {
+    alert(error.message || "Could not import data. Make sure it's valid JSON or text format.");
+    return;
+  }
+
+  if (!sessions || !sessions.length) {
+    alert("No workout sessions found to import.");
+    return;
+  }
+
+  // Normalize dates and merge sessions
+  sessions.forEach((session) => {
+    const normalizedDate = normalizeDate(session.date);
+    state.history = state.history.filter((h) => h.date !== normalizedDate);
+    state.history.push({
+      ...session,
+      date: normalizedDate
+    });
+  });
+
+  // Sort by date (newest first)
+  state.history.sort(
+    (a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
+  );
+
+  sessionDateInput.value = formatDate(today);
+  importText.value = "";
+  persistState();
+  renderSession();
+  alert(`Imported ${sessions.length} workout${sessions.length > 1 ? "s" : ""}.`);
+}
+
+function handleExport() {
+  if (!state.history.length) {
+    alert("No saved workouts to export yet.");
+    return;
+  }
+
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    history: state.history,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `workouts-${formatDate(today)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseImportedSessions(raw) {
+  const lines = raw.split(/\r?\n/);
+  const sessions = [];
+  let current = null;
+
+  function pushCurrent() {
+    if (!current) return;
+    const workout = templateMap[current.workoutId];
+    if (!workout) {
+      throw new Error(`Unknown workout name: ${current.workoutName}`);
+    }
+    if (!current.exercises.length) {
+      throw new Error(`No exercises found for ${current.workoutName}.`);
+    }
+    const exercises = current.exercises.map((ex) => {
+      const templateExercise = workout.exercises.find(
+        (t) => t.name.toLowerCase() === ex.name.toLowerCase()
+      );
+      return {
+        name: ex.name,
+        weight: ex.weight || templateExercise?.defaultWeight || "",
+        reps: ex.reps || templateExercise?.target || "",
+      };
+    });
+    sessions.push({
+      date: current.date,
+      workoutId: current.workoutId,
+      note: current.noteLines.join("\n").trim(),
+      exercises,
+    });
+    current = null;
+  }
+
+  lines.forEach((lineRaw) => {
+    const line = lineRaw.trimEnd();
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (!current) return;
+      if (!current.exercises.length) {
+        return; // ignore leading blank lines before exercises
+      }
+      current.inNote = true;
+      return;
+    }
+
+    const headerMatch = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\s+(.*)$/);
+    if (headerMatch) {
+      pushCurrent();
+      const [, month, day, maybeYear, workoutNameRaw] = headerMatch;
+      const workoutId = resolveWorkoutId(workoutNameRaw);
+      const date = resolveIsoDate(Number(month), Number(day), maybeYear);
+      current = {
+        workoutName: workoutNameRaw.trim(),
+        workoutId,
+        date,
+        exercises: [],
+        noteLines: [],
+        inNote: false,
+      };
+      return;
+    }
+
+    if (!current) return;
+
+    if (!current.inNote) {
+      const exercise = parseExerciseLine(line);
+      if (exercise) {
+        current.exercises.push(exercise);
+        return;
+      }
+      // If it isn't an exercise line, treat following lines as note.
+      current.inNote = true;
+    }
+
+    if (current.inNote) {
+      current.noteLines.push(line);
+    }
+  });
+
+  pushCurrent();
+  return sessions;
+}
+
+function parseExerciseLine(line) {
+  let parts = line.split(/\t+/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length <= 1) {
+    parts = line.split(/\s{2,}/).map((p) => p.trim()).filter(Boolean);
+  }
+
+  if (!parts.length) return null;
+  const [name, weight = "", reps = ""] = parts;
+  return { name, weight, reps };
+}
+
+function resolveWorkoutId(name) {
+  const normalized = name.toLowerCase().replace(/\s+/g, " ").trim();
+  const lookup = {
+    "upper hypertrophy": "upper-hyp",
+    "lower hypertrophy": "lower-hyp",
+    "upper power": "upper-power",
+    "lower power": "lower-power",
+  };
+  const workoutId = lookup[normalized];
+  if (!workoutId) {
+    throw new Error(`Unknown workout "${name}".`);
+  }
+  return workoutId;
+}
+
+function resolveIsoDate(month, day, yearString) {
+  let year = yearString ? Number(yearString) : today.getFullYear();
+  if (year < 100) {
+    year += 2000;
+  }
+
+  let candidate = new Date(year, month - 1, day);
+  if (!yearString && candidate > today) {
+    candidate = new Date(year - 1, month - 1, day);
+  }
+  return formatDate(candidate);
 }
 
 function normalizeBackupKey(value) {

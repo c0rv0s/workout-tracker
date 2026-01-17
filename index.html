@@ -85,6 +85,28 @@
     <section class="panel">
       <div class="panel-head">
         <div>
+          <p class="eyebrow">Data</p>
+          <h2>Import & Export</h2>
+        </div>
+      </div>
+      <div class="panel-body import-body">
+        <label for="import-text">Paste JSON export file or dated workouts from your notes</label>
+        <textarea
+          id="import-text"
+          rows="8"
+          placeholder="12/26 lower hypertrophy&#10;Front squat&#9;25/side&#9;3-4x8-12&#10;Barbell lunge&#9;35/side&#10;...&#10;&#10;Took it easy today"
+        ></textarea>
+        <div class="actions import-actions">
+          <button id="import-button" class="primary-btn">Import Notes</button>
+          <button id="export-button" class="ghost-btn">Export Data</button>
+          <p class="muted">Date + workout name on the first line, one exercise per line. Blank line before notes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
           <p class="eyebrow">Cloud Backup</p>
           <h2>Netlify Database</h2>
         </div>
