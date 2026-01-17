@@ -24,26 +24,13 @@ If you haven't already:
    - **Publish directory:** `/` (root directory)
    - Click **"Deploy site"**
 
-### 2. Enable Netlify Blobs
+### 2. No Need to Enable Blobs!
 
-**This is the key step!** Netlify Blobs needs to be enabled for your site:
+**Good news:** You don't need to enable Blobs in the dashboard! The function uses **Functions v2** format, which automatically configures Blobs when deployed.
 
-1. Go to your site dashboard on Netlify
-2. Click **"Site configuration"** in the left sidebar (or **"Site settings"**)
-3. Scroll down and look for **"Blobs"** section
-4. Click **"Enable Blobs"** or **"Connect Blobs"** button
-5. If you don't see a Blobs section:
-   - Go to **"Functions"** in the left sidebar
-   - Look for **"Blobs"** tab or section
-   - Enable it there
+The Blobs page you see is just for browsing/managing stores after they're created - you don't need to do anything there.
 
-**Alternative:** If Blobs isn't available on your plan, you can manually add environment variables:
-1. Go to **"Site configuration"** → **"Environment variables"**
-2. Add these variables (you'll need to get them from Netlify API or support):
-   - `SITE_ID` - Your site's ID (found in Site configuration → General)
-   - `NETLIFY_BLOBS_TOKEN` - A token from Netlify (may need to generate via API)
-
-**Note:** Blobs should work automatically on most Netlify plans, but if you get the "MissingBlobsEnvironment" error, you need to enable it in the dashboard first.
+**Just deploy your code and it will work!**
 
 ### 3. Verify Your Function is Deployed
 

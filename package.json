@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A beautiful, modern workout tracking app with rotation-based training support. Track your upper/lower power and hypertrophy sessions with style.",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "build": "echo \"No build step required\"",
     "test": "echo \"Error: no test specified\" && exit 1"
