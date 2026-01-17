@@ -373,7 +373,7 @@ function updateSaveButtonState(isToday, existing) {
   if (isToday) {
     saveButton.textContent = "Save Session";
   } else if (existing) {
-    saveButton.textContent = "Update Session";
+    saveButton.textContent = "Update";
   } else {
     saveButton.textContent = "Save Session";
   }
