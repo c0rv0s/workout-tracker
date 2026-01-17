@@ -8,7 +8,7 @@ A beautiful, modern workout tracking app with rotation-based training support. T
 - 📅 **Calendar View** - Visual calendar showing all your workout sessions
 - 📝 **Session Notes** - Add notes to each workout session
 - 💾 **Local Storage** - All data stored locally in your browser
-- ☁️ **Google Sheets Backup** - Optional cloud backup to Google Sheets
+- ☁️ **Netlify Database Backup** - Optional cloud backup via Netlify Functions + Blobs
 - 📱 **PWA Support** - Install as a Progressive Web App on your phone
 - 🎨 **Award-Winning Design** - Modern dark theme with electric lime accents
 
@@ -16,43 +16,26 @@ A beautiful, modern workout tracking app with rotation-based training support. T
 
 1. Open `index.html` in a web browser
 2. Start logging your workouts!
-3. (Optional) Set up Google Sheets backup for cloud storage
 
-## Google Sheets Backup (Optional)
+## Netlify Database Backup (Optional)
 
-The app includes optional Google Sheets backup functionality. **Important**: The backup is tied to the Google account that deploys the script.
-
-### Single User (Personal Use)
-
-If you're the only user:
-- Deploy the Google Apps Script once using your Google account
-- All backups go to your Google Drive
-- Setup instructions in `GOOGLE_SHEETS_SETUP.md`
-
-### Multiple Users
-
-**⚠️ Important**: If you share this app with others, each user needs their own Google Sheets backup setup to keep their data separate.
+The app can back up and restore workouts using a Netlify Function with Netlify Blobs storage.
 
 **How it works:**
-- The Google Apps Script runs with the credentials of whoever deployed it
-- All backups go to that person's Google Drive
-- If multiple users share the same script URL, they'll all write to the same spreadsheet (not recommended)
+- Each device generates a backup key (stored locally)
+- The same backup key can be used on another device to restore data
+- Anyone with the key can access the backup, so keep it private
+- No Google account is required
 
-**For each user:**
-1. Each user needs to deploy their own Google Apps Script (using their own Google account)
-2. Each user updates `google-sheets.js` with their own script URL
-3. Each user gets their own separate spreadsheet in their own Google Drive
-
-**Alternative:**
-- Users can use the local JSON export/import feature instead
-- This works independently per browser/device
-- No Google account needed
+**Netlify setup:**
+1. Deploy the site to Netlify with Functions enabled
+2. Ensure `@netlify/blobs` is installed (see `package.json`)
+3. Use the in-app Backup/Restore buttons
 
 ## Data Storage
 
 - **Local Storage**: All workout data is stored in your browser's localStorage
-- **Google Sheets Backup**: Optional cloud backup (requires setup)
-- **JSON Export**: Export/import your data as JSON files
+- **Netlify Database Backup**: Optional cloud backup via Netlify Functions + Blobs
 
 ## Browser Support
 

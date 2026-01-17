@@ -1,10 +1,9 @@
-const CACHE_NAME = "rotation-tracker-cache-v3";
+const CACHE_NAME = "rotation-tracker-cache-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./main.js",
-  "./google-sheets.js",
   "./manifest.webmanifest",
 ];
 
@@ -26,8 +25,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   
-  // Don't intercept external requests (Google Apps Script, etc.) - let browser handle them
-  if (url.origin !== self.location.origin) {
+  // Don't intercept external requests or Netlify Functions
+  if (url.origin !== self.location.origin || url.pathname.startsWith("/.netlify/functions/")) {
     return; // Don't call event.respondWith, let the browser handle it
   }
 

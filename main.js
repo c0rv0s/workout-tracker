@@ -66,6 +66,7 @@ const templateMap = templates.reduce((acc, template) => {
 }, {});
 
 const storageKey = "rotation-workout-state-v1";
+const backupKeyStorageKey = "rotation-workout-backup-key-v1";
 const sessionDateInput = document.getElementById("session-date");
 const plannedTitle = document.getElementById("planned-title");
 const exerciseListEl = document.getElementById("exercise-list");
@@ -73,9 +74,6 @@ const prefillCopy = document.getElementById("prefill-copy");
 const noteField = document.getElementById("session-note");
 const saveButton = document.getElementById("save-session");
 const resetTodayButton = document.getElementById("reset-today");
-const importText = document.getElementById("import-text");
-const importButton = document.getElementById("import-button");
-const exportButton = document.getElementById("export-button");
 const historyList = document.getElementById("history-list");
 const calendarGrid = document.getElementById("calendar-grid");
 const dayDetail = document.getElementById("day-detail");
@@ -86,8 +84,11 @@ const installButton = document.getElementById("install-button");
 const weekBar = document.getElementById("week-bar");
 const storageWarning = document.getElementById("storage-warning");
 const dismissWarningButton = document.getElementById("dismiss-warning");
-const googleBackupBtn = document.getElementById("google-backup-btn");
-const googleRestoreBtn = document.getElementById("google-restore-btn");
+const cloudBackupBtn = document.getElementById("cloud-backup-btn");
+const cloudRestoreBtn = document.getElementById("cloud-restore-btn");
+const cloudStatus = document.getElementById("cloud-status");
+const backupKeyInput = document.getElementById("backup-key");
+const backupKeyCopyBtn = document.getElementById("backup-key-copy");
 const todayPlanPanel = document.querySelector(".panel");
 const panelBody = document.querySelector(".panel-body");
 
@@ -108,8 +109,6 @@ function init() {
   sessionDateInput.value = formatDate(today);
   saveButton.addEventListener("click", handleSave);
   resetTodayButton.addEventListener("click", handleResetToday);
-  importButton.addEventListener("click", handleImport);
-  exportButton.addEventListener("click", handleExport);
   prevMonthBtn.addEventListener("click", () => changeMonth(-1));
   nextMonthBtn.addEventListener("click", () => changeMonth(1));
   
@@ -121,11 +120,32 @@ function init() {
     });
   }
 
-  if (googleBackupBtn) {
-    googleBackupBtn.addEventListener("click", handleGoogleBackup);
+  if (cloudBackupBtn) {
+    cloudBackupBtn.addEventListener("click", handleCloudBackup);
   }
-  if (googleRestoreBtn) {
-    googleRestoreBtn.addEventListener("click", handleGoogleRestore);
+  if (cloudRestoreBtn) {
+    cloudRestoreBtn.addEventListener("click", handleCloudRestore);
+  }
+  if (backupKeyInput) {
+    backupKeyInput.addEventListener("input", () => {
+      const normalized = normalizeBackupKey(backupKeyInput.value);
+      if (normalized !== backupKeyInput.value) {
+        backupKeyInput.value = normalized;
+      }
+    });
+    backupKeyInput.addEventListener("change", () => {
+      const normalized = normalizeBackupKey(backupKeyInput.value);
+      if (!normalized) {
+        const replacement = generateBackupKey();
+        backupKeyInput.value = replacement;
+        setBackupKey(replacement);
+        return;
+      }
+      setBackupKey(normalized);
+    });
+  }
+  if (backupKeyCopyBtn) {
+    backupKeyCopyBtn.addEventListener("click", handleCopyBackupKey);
   }
 
   // Add click handler for expanding collapsed panel
@@ -133,10 +153,7 @@ function init() {
     todayPlanPanel.addEventListener("click", expandPanel);
   }
 
-  // Initialize Google Sheets if available
-  if (typeof initGoogleSheets === 'function') {
-    initGoogleSheets();
-  }
+  initCloudBackup();
 
   registerServiceWorker();
   setupInstallPrompt();
@@ -626,209 +643,192 @@ function setDayDetail(dateValue) {
   `;
 }
 
-function handleImport() {
-  const raw = importText.value.trim();
-  if (!raw) {
-    alert("Paste your data first (JSON export or text notes).");
-    return;
-  }
-
-  let sessions;
-  try {
-    // Try parsing as JSON first (from export file)
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      // Not JSON, try as text format
-      sessions = parseImportedSessions(raw);
-    }
-
-    // If it's JSON, extract the history
-    if (parsed) {
-      if (parsed.history && Array.isArray(parsed.history)) {
-        sessions = parsed.history;
-      } else if (Array.isArray(parsed)) {
-        // Handle case where JSON is just an array
-        sessions = parsed;
-      } else {
-        throw new Error("Invalid JSON format. Expected {history: [...]} or [...]");
-      }
-    }
-  } catch (error) {
-    alert(error.message || "Could not import data. Make sure it's valid JSON or text format.");
-    return;
-  }
-
-  if (!sessions || !sessions.length) {
-    alert("No workout sessions found to import.");
-    return;
-  }
-
-  // Normalize dates and merge sessions
-  sessions.forEach((session) => {
-    const normalizedDate = normalizeDate(session.date);
-    state.history = state.history.filter((h) => h.date !== normalizedDate);
-    state.history.push({
-      ...session,
-      date: normalizedDate
-    });
-  });
-
-  // Sort by date (newest first)
-  state.history.sort(
-    (a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
-  );
-
-  sessionDateInput.value = formatDate(today);
-  importText.value = "";
-  persistState();
-  renderSession();
-  alert(`Imported ${sessions.length} workout${sessions.length > 1 ? "s" : ""}.`);
+function normalizeBackupKey(value) {
+  if (!value) return "";
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-_]/g, "")
+    .slice(0, 64);
 }
 
-function handleExport() {
+function generateBackupKey() {
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(6);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  return `rw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getBackupKey() {
+  const existing = normalizeBackupKey(localStorage.getItem(backupKeyStorageKey) || "");
+  if (existing) return existing;
+  const generated = generateBackupKey();
+  setBackupKey(generated);
+  return generated;
+}
+
+function setBackupKey(value) {
+  try {
+    localStorage.setItem(backupKeyStorageKey, value);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function getBackupKeyFromInput() {
+  if (!backupKeyInput) return "";
+  const normalized = normalizeBackupKey(backupKeyInput.value);
+  if (!normalized) {
+    updateCloudStatus("Enter a backup key to continue.");
+    backupKeyInput.focus();
+    return "";
+  }
+  if (normalized !== backupKeyInput.value) {
+    backupKeyInput.value = normalized;
+  }
+  setBackupKey(normalized);
+  return normalized;
+}
+
+function updateCloudStatus(message) {
+  if (cloudStatus) {
+    cloudStatus.textContent = message;
+  }
+}
+
+function parseErrorMessage(errorText, fallback) {
+  if (!errorText) return fallback;
+  try {
+    const parsed = JSON.parse(errorText);
+    if (parsed?.error) return parsed.error;
+  } catch {
+    // ignore parse errors
+  }
+  return errorText;
+}
+
+function initCloudBackup() {
+  if (!cloudStatus) return;
+  if (backupKeyInput) {
+    backupKeyInput.value = getBackupKey();
+  }
+  updateCloudStatus("Ready to backup/restore.");
+}
+
+async function handleCopyBackupKey() {
+  const key = getBackupKeyFromInput();
+  if (!key) return;
+  try {
+    await navigator.clipboard.writeText(key);
+    updateCloudStatus("Backup key copied.");
+  } catch (error) {
+    console.error("Failed to copy backup key:", error);
+    updateCloudStatus("Copy failed. Please copy the key manually.");
+  }
+}
+
+async function handleCloudBackup() {
   if (!state.history.length) {
-    alert("No saved workouts to export yet.");
+    updateCloudStatus("No workout sessions to backup.");
     return;
   }
+
+  const key = getBackupKeyFromInput();
+  if (!key) return;
 
   const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    history: state.history,
+    key,
+    data: {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      history: state.history,
+    },
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `workouts-${formatDate(today)}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+
+  updateCloudStatus("Backing up to Netlify...");
+
+  try {
+    if (cloudBackupBtn) cloudBackupBtn.disabled = true;
+    const response = await fetch("/.netlify/functions/backup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(parseErrorMessage(errorText, `HTTP ${response.status}`));
+    }
+
+    await response.json().catch(() => ({}));
+    const count = state.history.length;
+    updateCloudStatus(`✓ Backed up ${count} session${count === 1 ? "" : "s"} to Netlify.`);
+  } catch (error) {
+    console.error("Backup failed:", error);
+    updateCloudStatus(`Backup failed: ${error.message}`);
+    alert(`Backup failed: ${error.message}`);
+  } finally {
+    if (cloudBackupBtn) cloudBackupBtn.disabled = false;
+  }
 }
 
-function parseImportedSessions(raw) {
-  const lines = raw.split(/\r?\n/);
-  const sessions = [];
-  let current = null;
+async function handleCloudRestore() {
+  const key = getBackupKeyFromInput();
+  if (!key) return;
 
-  function pushCurrent() {
-    if (!current) return;
-    const workout = templateMap[current.workoutId];
-    if (!workout) {
-      throw new Error(`Unknown workout name: ${current.workoutName}`);
-    }
-    if (!current.exercises.length) {
-      throw new Error(`No exercises found for ${current.workoutName}.`);
-    }
-    const exercises = current.exercises.map((ex) => {
-      const templateExercise = workout.exercises.find(
-        (t) => t.name.toLowerCase() === ex.name.toLowerCase()
-      );
-      return {
-        name: ex.name,
-        weight: ex.weight || templateExercise?.defaultWeight || "",
-        reps: ex.reps || templateExercise?.target || "",
-      };
-    });
-    sessions.push({
-      date: current.date,
-      workoutId: current.workoutId,
-      note: current.noteLines.join("\n").trim(),
-      exercises,
-    });
-    current = null;
+  if (!confirm("This will replace your current workout data with the Netlify backup. Continue?")) {
+    return;
   }
 
-  lines.forEach((lineRaw) => {
-    const line = lineRaw.trimEnd();
-    const trimmed = line.trim();
-    if (!trimmed) {
-      if (!current) return;
-      if (!current.exercises.length) {
-        return; // ignore leading blank lines before exercises
-      }
-      current.inNote = true;
+  updateCloudStatus("Restoring from Netlify...");
+
+  try {
+    if (cloudRestoreBtn) cloudRestoreBtn.disabled = true;
+    const response = await fetch(`/.netlify/functions/backup?key=${encodeURIComponent(key)}`, {
+      method: "GET",
+    });
+
+    if (response.status === 404) {
+      updateCloudStatus("No backup found for this key.");
       return;
     }
 
-    const headerMatch = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\s+(.*)$/);
-    if (headerMatch) {
-      pushCurrent();
-      const [, month, day, maybeYear, workoutNameRaw] = headerMatch;
-      const workoutId = resolveWorkoutId(workoutNameRaw);
-      const date = resolveIsoDate(Number(month), Number(day), maybeYear);
-      current = {
-        workoutName: workoutNameRaw.trim(),
-        workoutId,
-        date,
-        exercises: [],
-        noteLines: [],
-        inNote: false,
-      };
-      return;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(parseErrorMessage(errorText, `HTTP ${response.status}`));
     }
 
-    if (!current) return;
-
-    if (!current.inNote) {
-      const exercise = parseExerciseLine(line);
-      if (exercise) {
-        current.exercises.push(exercise);
-        return;
-      }
-      // If it isn't an exercise line, treat following lines as note.
-      current.inNote = true;
+    const result = await response.json();
+    const sessions = result?.data?.history;
+    if (!sessions || !Array.isArray(sessions)) {
+      throw new Error("Invalid backup data received from Netlify.");
     }
 
-    if (current.inNote) {
-      current.noteLines.push(line);
-    }
-  });
+    const normalizedSessions = sessions.map((session) => ({
+      ...session,
+      date: normalizeDate(session.date),
+    }));
 
-  pushCurrent();
-  return sessions;
-}
+    state.history = normalizedSessions.sort(
+      (a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
+    );
 
-function parseExerciseLine(line) {
-  let parts = line.split(/\t+/).map((p) => p.trim()).filter(Boolean);
-  if (parts.length <= 1) {
-    parts = line.split(/\s{2,}/).map((p) => p.trim()).filter(Boolean);
+    persistState();
+    renderSession();
+    renderHistory();
+    renderCalendar();
+
+    updateCloudStatus(`✓ Restored ${sessions.length} session${sessions.length === 1 ? "" : "s"} from Netlify.`);
+  } catch (error) {
+    console.error("Restore failed:", error);
+    updateCloudStatus(`Restore failed: ${error.message}`);
+    alert(`Restore failed: ${error.message}`);
+  } finally {
+    if (cloudRestoreBtn) cloudRestoreBtn.disabled = false;
   }
-
-  if (!parts.length) return null;
-  const [name, weight = "", reps = ""] = parts;
-  return { name, weight, reps };
-}
-
-function resolveWorkoutId(name) {
-  const normalized = name.toLowerCase().replace(/\s+/g, " ").trim();
-  const lookup = {
-    "upper hypertrophy": "upper-hyp",
-    "lower hypertrophy": "lower-hyp",
-    "upper power": "upper-power",
-    "lower power": "lower-power",
-  };
-  const workoutId = lookup[normalized];
-  if (!workoutId) {
-    throw new Error(`Unknown workout "${name}".`);
-  }
-  return workoutId;
-}
-
-function resolveIsoDate(month, day, yearString) {
-  let year = yearString ? Number(yearString) : today.getFullYear();
-  if (year < 100) {
-    year += 2000;
-  }
-
-  let candidate = new Date(year, month - 1, day);
-  if (!yearString && candidate > today) {
-    candidate = new Date(year - 1, month - 1, day);
-  }
-  return formatDate(candidate);
 }
 
 function handleReset() {
@@ -879,65 +879,3 @@ function setupInstallPrompt() {
   });
 }
 
-async function handleGoogleBackup() {
-  if (!state.history.length) {
-    alert("No workout sessions to backup.");
-    return;
-  }
-
-  if (typeof exportToGoogleSheets !== 'function') {
-    alert("Google Sheets backup is not configured. Please set GOOGLE_SCRIPT_URL in google-sheets.js");
-    return;
-  }
-
-  try {
-    googleBackupBtn.disabled = true;
-    await exportToGoogleSheets(state);
-  } catch (error) {
-    alert(`Backup failed: ${error.message}`);
-  } finally {
-    googleBackupBtn.disabled = false;
-  }
-}
-
-async function handleGoogleRestore() {
-  if (typeof importFromGoogleSheets !== 'function') {
-    alert("Google Sheets backup is not configured. Please set GOOGLE_SCRIPT_URL in google-sheets.js");
-    return;
-  }
-
-  if (!confirm("This will replace your current workout data with data from Google Sheets. Continue?")) {
-    return;
-  }
-
-  try {
-    googleRestoreBtn.disabled = true;
-    const sessions = await importFromGoogleSheets();
-    
-    if (!sessions || !Array.isArray(sessions)) {
-      throw new Error("Invalid data received from Google Sheets");
-    }
-
-    // Normalize all dates to YYYY-MM-DD format
-    const normalizedSessions = sessions.map(session => ({
-      ...session,
-      date: normalizeDate(session.date)
-    }));
-
-    // Replace current state and sort by date (newest first)
-    state.history = normalizedSessions.sort(
-      (a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime()
-    );
-    
-    persistState();
-    renderSession();
-    renderHistory();
-    renderCalendar();
-    
-    alert(`Restored ${sessions.length} workout sessions from Google Sheets.`);
-  } catch (error) {
-    alert(`Restore failed: ${error.message}`);
-  } finally {
-    googleRestoreBtn.disabled = false;
-  }
-}
