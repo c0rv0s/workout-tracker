@@ -35,7 +35,6 @@ The app can back up and restore workouts using a Netlify Function with Netlify B
 ## Data Storage
 
 - **Local Storage**: All workout data is stored in your browser's localStorage
-- **JSON Export/Import**: Export/import your data as JSON files
 - **Netlify Database Backup**: Optional cloud backup via Netlify Functions + Blobs
 
 ## Browser Support
