@@ -339,6 +339,9 @@ a:hover {
 .week-dot span {
   position: relative;
   z-index: 1;
+}
+
+.week-dot.filled span {
   filter: grayscale(100%) brightness(0);
   font-size: 18px;
   line-height: 1;

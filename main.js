@@ -595,6 +595,7 @@ function renderCalendar() {
 
 function renderWeekBar() {
   if (!weekBar) return;
+  const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
   const start = new Date(today);
   start.setDate(today.getDate() - today.getDay());
 
@@ -606,7 +607,7 @@ function renderWeekBar() {
     const bubble = document.createElement("button");
     bubble.className = `week-dot${entry ? " filled" : ""}`;
     const span = document.createElement("span");
-    span.textContent = "💪";
+    span.textContent = entry ? "💪" : dayNames[i];
     bubble.appendChild(span);
     if (entry) {
       const label = templateMap[entry.workoutId]?.name || "Workout";
